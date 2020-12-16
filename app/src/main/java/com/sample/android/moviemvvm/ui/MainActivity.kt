@@ -1,10 +1,16 @@
 package com.sample.android.moviemvvm.ui
 
 import android.app.ActivityOptions
+import android.content.Context
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.content.Intent.ACTION_SEARCH
+import android.graphics.Color
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import androidx.core.view.GravityCompat
@@ -12,6 +18,7 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toast
 import com.sample.android.moviemvvm.util.NavType
 import com.sample.android.moviemvvm.R
 import com.sample.android.moviemvvm.ui.item.movie.HighRateMoviesFragment
@@ -29,7 +36,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main_nav.*
 import javax.inject.Inject
 
-class MainActivity : DaggerAppCompatActivity() {
+class MainActivity : DaggerAppCompatActivity(), SensorEventListener {
 
     @Inject
     lateinit var popularMoviesFragment: PopularMoviesFragment
@@ -50,6 +57,17 @@ class MainActivity : DaggerAppCompatActivity() {
     lateinit var latestTVShowFragment: LatestTVShowFragment
 
     private lateinit var viewModel: MainViewModel
+    private var sensorManager: SensorManager? = null
+    private var color = false
+
+    override fun onAccuracyChanged(s: Sensor?, i: Int) {
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event!!.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+            getAccelerometer(event)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -114,12 +132,33 @@ class MainActivity : DaggerAppCompatActivity() {
                 replaceFragmentInActivity(fragment, R.id.fragment_container)
                 true
             }
+
+            sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         }
 
         viewModel = ViewModelProviders.of(this).get(MainViewModel::class.java)
         viewModel.headline.observe(this, Observer {
             title = it
         })
+    }
+
+    private fun getAccelerometer(event: SensorEvent) {
+        // Movement
+        val xVal = event.values[0]
+        val yVal = event.values[1]
+        val zVal = event.values[2]
+
+        val accelerationSquareRoot = (xVal * xVal + yVal * yVal + zVal * zVal) / (SensorManager.GRAVITY_EARTH * SensorManager.GRAVITY_EARTH)
+
+        if (accelerationSquareRoot >= 3) {
+            Toast.makeText(this, "Device was shuffled", Toast.LENGTH_SHORT).show()
+            if (color) {
+                toolbar.setBackgroundColor(resources.getColor(R.color.colorAccent))
+            } else {
+                toolbar.setBackgroundColor(Color.YELLOW)
+            }
+            color = !color
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
